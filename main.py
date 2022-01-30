@@ -1,6 +1,16 @@
 import diffuser_cam
+import matplotlib.pyplot as plt
+
 if __name__ == '__main__':
     # Loads configuration parameters.
     config = diffuser_cam.load_config('config/default.json')
 
-    diffuser_cam.load_data('img/psf.tif', 'img/measurement.tif', downsample_factor=config['downsample_factor'], show_im=True)
+    psf, data = diffuser_cam.load_data('img/psf.tif', 'img/measurement.tif', downsample_factor=config['downsample_factor'], show_im=False)
+
+    reconstruction = diffuser_cam.sgd(psf, data, n_iter=config['n_iter'])
+    plt.figure()
+    plt.imshow(reconstruction, cmap='gray')
+    plt.show()
+
+
+
