@@ -56,9 +56,11 @@ def downsample(img, factor):
         IOError: Input downsample factor is outside of (0, 1).
 
     """
-    if factor >= 1 or factor < 0:
+    if factor > 1 or factor < 0:
         raise IOError(
-            "The image downsampling factor must be between 0 and 1 (non inclusive).")
+            "The image downsampling factor must be between 0 (exclusive) and 1 (inclusive).")
+    if factor == 1:
+        return img
 
     num = int(-np.log2(factor))
     for i in range(num):

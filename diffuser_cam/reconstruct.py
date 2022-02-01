@@ -1,7 +1,8 @@
 from . import utils
 import numpy as np
+import matplotlib.pyplot as plt
 
-def sgd(psf, data, n_iter=3):
+def sgd(psf, data, n_iter=3, show_im=False):
     # Initializes matrices.
     # TODO(mchan): Better understand why the 1/sqrt(N) scaling factor matters here.
     A = np.fft.fft2(np.fft.ifftshift(utils.pad(psf)), norm='ortho')
@@ -21,7 +22,13 @@ def sgd(psf, data, n_iter=3):
         gradient = utils.crop(np.fft.fftshift(np.fft.ifft2(AhA * xt)), data.shape) - Ahb
         x -= alpha * np.real(gradient)
         n_iter -= 1
-    return np.maximum(x, 0)
+
+    result = np.maximum(x, 0)
+    if (show_im):
+        plt.figure()
+        plt.imshow(result)
+        plt.show()
+    return result
 
 # TODO(mchan): Move previous PnP-ADMM implementation here.
 def pnp_admm(psf, data, n_iter, rho):
