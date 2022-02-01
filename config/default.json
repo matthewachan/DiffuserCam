@@ -1,4 +1,7 @@
 {
+    "psf": "",
+    "measurement": "",
     "downsample_factor": 0.125,
-    "n_iter": 200
+    "n_iter": 10,
+    "rho": 0.00001
 }
