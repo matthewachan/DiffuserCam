@@ -1,5 +1,10 @@
 import numpy as np
 import cv2
+import torch
+from torch.autograd import Variable
+
+from DnCNN.models import DnCNN
+from DnCNN.utils import *
 
 def compute_padding(n):
     """ Returns the nearest power of 2 that is larger than 2N. 
@@ -67,3 +72,33 @@ def downsample(img, factor):
         img = 0.25*(img[::2, ::2, ...]+img[1::2, ::2, ...] +
                     img[::2, 1::2, ...]+img[1::2, 1::2, ...])
     return img
+
+class Denoiser():
+    def __init__(self, cuda=False):
+        model_path = './DnCNN/logs/DnCNN-S-15/net.pth'
+        n_layers = 17
+        net = DnCNN(channels=1, num_of_layers=n_layers)
+        device_ids = [0]
+
+        self.cuda = cuda
+        if not self.cuda:
+            self.model = torch.nn.DataParallel(net, device_ids=device_ids)
+            self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        else:
+            self.model = torch.nn.DataParallel(net, device_ids=device_ids).cuda()
+            self.model.load_state_dict(torch.load(model_path))
+        self.model.eval()
+
+    def denoise(self, img):
+        img = np.float32(img[:, :, 0])
+        img = np.expand_dims(img, 0)
+        img = np.expand_dims(img, 1)
+        noisy = Variable()
+        if self.cuda:
+            noisy = Variable(torch.Tensor(img).cuda())
+        else:
+            noisy = Variable(torch.Tensor(img))
+        with torch.no_grad():
+            result = torch.clamp(noisy - self.model(noisy), 0., 1.)
+        result = torch.squeeze(result.data.cpu(), 0).permute(1, 2, 0)
+        return result.numpy()

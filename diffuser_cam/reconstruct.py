@@ -1,13 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
-from torch.autograd import Variable
 
 from . import utils
-from DnCNN.models import DnCNN
-from DnCNN.utils import *
 
-def sgd(psf, data, n_iter=3, show_im=False):
+# TODO(mchan): Refactor matrix precomputation into a separate function.
+def sgd(psf, data, n_iter, show_im=False):
+    """Reconstructs the scene using stochastic gradient descent.
+
+    Args:
+        psf: The point spread function image.
+        data: The blurry diffuser cam image.
+        n_iter: Number of iterations of the optimization loop.
+        show_im: Flag to enable/disable displaying the final reconstructed image.
+
+    Returns:
+        The reconstructed image.
+    """
     # Initializes matrices.
     # TODO(mchan): Better understand why the 1/sqrt(N) scaling factor matters here.
     A = np.fft.fft2(np.fft.ifftshift(utils.pad(psf)), norm='ortho')
@@ -35,38 +43,61 @@ def sgd(psf, data, n_iter=3, show_im=False):
         plt.show()
     return result
 
-class Denoiser():
-    def __init__(self, cuda=False):
-        model_path = './DnCNN/logs/DnCNN-S-15/net.pth'
-        n_layers = 17
-        net = DnCNN(channels=1, num_of_layers=n_layers)
-        device_ids = [0]
+def tikhonov(psf, data, n_iter, alpha, show_im=False):
+    """Reconstructs the scene using Tikhonov regularization (aka ridge regression).
 
-        self.cuda = cuda
-        if not self.cuda:
-            self.model = torch.nn.DataParallel(net, device_ids=device_ids)
-            self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-        else:
-            self.model = torch.nn.DataParallel(net, device_ids=device_ids).cuda()
-            self.model.load_state_dict(torch.load(model_path))
-        self.model.eval()
+    For the sake of simplicity, the Tikhonov matrix used is the identity matrix scaled by a parameter alpha.
 
-    def denoise(self, img):
-        img = np.float32(img[:, :, 0])
-        img = np.expand_dims(img, 0)
-        img = np.expand_dims(img, 1)
-        noisy = Variable()
-        if self.cuda:
-            noisy = Variable(torch.Tensor(img).cuda())
-        else:
-            noisy = Variable(torch.Tensor(img))
-        with torch.no_grad():
-            result = torch.clamp(noisy - self.model(noisy), 0., 1.)
-        result = torch.squeeze(result.data.cpu(), 0).permute(1, 2, 0)
-        return result.numpy()
+    Args:
+        psf: The point spread function image.
+        data: The blurry diffuser cam image.
+        n_iter: Number of iterations of the optimization loop.
+        alpha: Scalar hyperparameter that is used to construct the Tikhonov matrix. In this implementation, the Tikhonov matrix is simply the identity matrix scaled by this parameter, alpha.
+        show_im: Flag to enable/disable displaying the final reconstructed image.
 
-def pnp_admm(psf, data, n_iter, rho, show_im=False):
-    dncnn = Denoiser()
+    Returns:
+        The reconstructed image.
+    """
+    # Initializes matrices.
+    A = np.fft.fft2(np.fft.ifftshift(utils.pad(psf)), norm='ortho')
+    b = np.fft.fft2(np.fft.ifftshift(utils.pad(data)))
+    x = np.ones(data.shape) * 0.5
+
+    # The Hermitian (aka conjugate transpose) of a matrix A in the spatial domain is equal to the conjugate of DFT(A).
+    Ah = A.conj()
+
+    # Precomputes matrices outside of the iterative optimization loop.
+    AhA = Ah * A
+    Ahb = Ah * b 
+
+    while n_iter > 0:
+        denom = AhA + alpha
+        numerator = Ahb
+        x += np.real(utils.crop(np.fft.fftshift(np.fft.ifft2(numerator / denom)), data.shape))
+        n_iter -= 1
+
+    result = np.maximum(x, 0)
+    if (show_im):
+        plt.figure()
+        plt.imshow(result)
+        plt.show()
+    return result
+
+def pnp_admm(psf, data, n_iter, rho, show_im=False, cuda=False):
+    """Reconstructs the scene using plug-and-play ADMM.
+
+    Args:
+        psf: The point spread function image.
+        data: The blurry diffuser cam image.
+        n_iter: Number of iterations of the optimization loop.
+        rho: Scalar Lagrange multiplier.
+        show_im: Flag to enable/disable displaying the final reconstructed image.
+        cuda: Flag to enable/disable running the denoiser model on GPU.
+
+    Returns:
+        The reconstructed image.
+    """
+    dncnn = utils.Denoiser(cuda)
     # Initializes matrices.
     A = np.fft.fft2(np.fft.ifftshift(utils.pad(psf)), norm='ortho')
     b = np.fft.fft2(np.fft.ifftshift(utils.pad(data)))

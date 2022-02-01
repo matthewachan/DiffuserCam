@@ -61,13 +61,14 @@ def load_data(psf, data, show_im=False, downsample_factor=1.0/8.0):
         plt.show()
     return psf, data
 
-def load_sim_data(gt, psf, downsample_factor, show_im=False):
+def load_sim_data(gt, psf, downsample_factor, noise_level, show_im=False):
     """Generates a PSF and a simulated diffuser cam image that can be used to test the reconstruction algorithm.
 
     Args:
         gt: Path to the ground truth clear image or the image itself
         psf: Path to the PSF or the image itself
         downsample_factor: Factor to rescale the PSF and ground truth images by for faster processing speed.
+        noise_level: The amount of white Gaussian noise to add as a percentage of the maximum image intensity.
         show_im: Flag to enable/disable displaying the simulated diffuser cam measurement image.
 
     Returns:
@@ -94,7 +95,9 @@ def load_sim_data(gt, psf, downsample_factor, show_im=False):
     b = np.fft.fft2(np.fft.ifftshift(utils.pad(gt)))
     data = np.real(utils.crop(np.fft.fftshift(np.fft.ifft2(A * b)), psf.shape))
 
-    # TODO(mchan): Add AWGN to the image.
+    std_dev = np.amax(data) * noise_level
+    noise = np.random.normal(0, std_dev, data.shape)
+    data += noise
 
     if (show_im):
         plt.figure()
@@ -102,3 +105,4 @@ def load_sim_data(gt, psf, downsample_factor, show_im=False):
         plt.imshow(data)
         plt.show()
     return psf, data
+
