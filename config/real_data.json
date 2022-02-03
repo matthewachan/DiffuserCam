@@ -1,0 +1,6 @@
+{
+    "psf": "img/psf.tif",
+    "measurement": "img/measurement.tif",
+    "downsample_factor": 0.25,
+    "noise_level": 0.01
+}

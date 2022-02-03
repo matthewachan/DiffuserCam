@@ -1,0 +1,5 @@
+{
+    "algorithm": "tikhonov",
+    "n_iter": 200,
+    "alpha": 0.0000005
+}
