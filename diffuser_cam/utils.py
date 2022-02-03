@@ -1,3 +1,10 @@
+"""
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
 import numpy as np
 import cv2
 import torch
@@ -30,7 +37,6 @@ def pad(input):
         input, v_pad, v_pad, h_pad, h_pad, cv2.BORDER_CONSTANT)
     return padded
 
-
 def crop(input, original_shape):
     """ Returns the cropped version of a padded image
 
@@ -43,7 +49,6 @@ def crop(input, original_shape):
     h, w = original_shape
     h_pad, w_pad = diff // 2
     return input[h_pad:(input.shape[0] - h_pad), w_pad:(input.shape[1] - w_pad)]
-
 
 def downsample(img, factor):
     """Downsamples an image.
@@ -72,6 +77,34 @@ def downsample(img, factor):
         img = 0.25*(img[::2, ::2, ...]+img[1::2, ::2, ...] +
                     img[::2, 1::2, ...]+img[1::2, 1::2, ...])
     return img
+
+def precompute_matrices(psf, data):
+    """Precomputes matrix multiplication operations.
+    
+    Args:
+        psf: The point spread function image.
+        data: The blurry diffuser cam image.
+    
+    Returns:
+        A tuple of precomputed matrices that are commonly used in the closed form solution of optimization methods.
+
+        x: Initial guess of the solution.
+        AhA: Hermitian of the FFT of the PSF multiplied by itself.
+        AhB: Hermitian of the FFT of the PSF multiplied by the FFT of the diffuser cam image.
+    """
+    # Initializes matrices.
+    # TODO(mchan): Better understand why the 1/sqrt(N) scaling factor matters here.
+    A = np.fft.fft2(np.fft.ifftshift(pad(psf)), norm='ortho')
+    b = np.fft.fft2(np.fft.ifftshift(pad(data)))
+    x = np.ones(data.shape) * 0.5
+
+    # The Hermitian (aka conjugate transpose) of a matrix A in the spatial domain is equal to the conjugate of DFT(A).
+    Ah = A.conj()
+
+    # Precomputes matrices outside of the iterative optimization loop.
+    AhA = Ah * A
+    Ahb = Ah * b
+    return x, AhA, Ahb
 
 class Denoiser():
     def __init__(self, cuda=False):

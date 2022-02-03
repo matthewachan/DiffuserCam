@@ -1,12 +1,23 @@
 import diffuser_cam
 import matplotlib.pyplot as plt
 
+# Runs the reconstruction algorithm on real data.
+def main():
+    algo = diffuser_cam.Algorithm('config/algorithm.json')
+    dataloader = diffuser_cam.DataLoader('config/real_data.json')
+    psf, data = dataloader.load_real_data()
+    algo.reconstruct(psf, data, show_im=True)
+
+# Example script to evalute the algorithm reconstructions in simulation.
+def run_sim():
+    algo = diffuser_cam.Algorithm('config/algorithm.json')
+    dataloader = diffuser_cam.DataLoader('config/sim_data.json')
+    psf, data, gt = dataloader.load_sim_data()
+    plt.figure()
+    plt.title('Ground truth (downsampled)')
+    plt.imshow(gt)
+    algo.reconstruct(psf, data, show_im=True)
+
 if __name__ == '__main__':
-    # Loads configuration parameters.
-    config = diffuser_cam.load_config('config/default.json')
-
-    psf, data = diffuser_cam.load_data(config['psf'], config['measurement'], downsample_factor=config['downsample_factor'], show_im=False)
-
-    # reconstruction = diffuser_cam.sgd(psf, data, n_iter=config['n_iter'], show_im=True)
-    reconstruction = diffuser_cam.tikhonov(psf, data, n_iter=config['n_iter'], show_im=True)
-    # reconstruction = diffuser_cam.pnp_admm(psf, data, n_iter=config['n_iter'], rho=config['rho'], show_im=True)
+    # main()
+    run_sim()

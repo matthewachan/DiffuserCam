@@ -2,8 +2,5 @@
     "psf": "img/psf.tif",
     "measurement": "img/measurement.tif",
     "downsample_factor": 0.25,
-    "n_iter": 35,
-    "noise_level": 0.01,
-    "rho": 0.00000001,
-    "alpha": 0.0000005
+    "noise_level": 0.01
 }
