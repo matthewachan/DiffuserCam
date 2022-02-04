@@ -21,6 +21,7 @@ class Algorithm:
         n_iter: Number of iterations to run the optimization loop for.
         rho: Floating point hyperparameter required by ADMM. 
         alpha: Floating point hyperparameter required by the Tikhonov reconstruction algorithm.
+        cuda: Flag to enable/disable running torch on CUDA devices. This flag is only used when running PnP-ADMM.
 
     Attributes:
         config: Dictionary of configuration parameters for the reconstruction algorithm.
@@ -51,7 +52,7 @@ class Algorithm:
         n_iter = self.config['n_iter']
 
         if (algorithm_name == 'pnp_admm'):
-            return pnp_admm(psf, data, n_iter, self.config['rho'], show_im)
+            return pnp_admm(psf, data, n_iter, self.config['rho'], show_im, self.config['cuda'])
         elif (algorithm_name == 'tikhonov'):
             return tikhonov(psf, data, n_iter, self.config['alpha'], show_im)
         elif (algorithm_name == 'sgd'):
@@ -173,7 +174,7 @@ def pnp_admm(psf, data, n_iter, rho, show_im=False, cuda=False):
     return result
 
 # TODO(mchan): Implement isotropic TV instead of anisotropic TV.
-def tv_admm(psf, data, n_iter, tau, rho, show_im=False, cuda=False):
+def tv_admm(psf, data, n_iter, tau, rho, show_im=False):
     """Reconstructs the scene using anisotropic total variation ADMM.
 
     Args:
@@ -183,7 +184,6 @@ def tv_admm(psf, data, n_iter, tau, rho, show_im=False, cuda=False):
         tau: Hyperparameter used to determine the threshold for soft thresholding.
         rho: Penalty parameter.
         show_im: Flag to enable/disable displaying the final reconstructed image.
-        cuda: Flag to enable/disable running the denoiser model on GPU.
 
     Returns:
         The reconstructed image.
