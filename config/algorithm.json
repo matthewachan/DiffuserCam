@@ -1,5 +1,7 @@
 {
     "algorithm": "tikhonov",
     "n_iter": 200,
-    "alpha": 0.0000005
+    "alpha": 0.0000005,
+    "rho": 0.00000005,
+    "tau": 0.000001
 }

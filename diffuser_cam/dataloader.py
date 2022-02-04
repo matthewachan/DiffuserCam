@@ -14,6 +14,7 @@ import typing
 
 from diffuser_cam import utils
 
+
 class DataLoader():
     """Loads and preprocesses PSFs, diffuser cam images, and ground truth images. The output of the DataLoader serves as input to the reconstruction algorithm. (See the Algorithm class for more details).
 
@@ -25,15 +26,16 @@ class DataLoader():
         noise_level: Floating point number denoting how much white Gaussian noise to add to the simulated diffuser cam image. This parameter is only requird when calling load_sim_data().
 
     Attributes:
-        downsample_factor: Amount to downsample the images.
-        noise_level: Level of added white Gaussian noise used in simulated reconstructions.
         psf_fname: Path to the PSF image.
-        gt_fname: Path to the ground truth image.
         measurement_fname: Path to the diffuser cam measurement image.
+        gt_fname: Path to the ground truth image.
+        downsample_factor: Amount to downsample the images.
+        noise_level: Level of added white Gaussian noise used in simulated reconstructions. The standard deviation of the Gaussian noise is equal to the maximum image intensity times the noise_level.
     """
+
     def __init__(self, config_fname: str) -> None:
         """Loads the JSON config file.
-        
+
         Args:
             config_fname: Path to the JSON configuration file.
         """
@@ -43,11 +45,11 @@ class DataLoader():
             self.measurement_fname = config.get('measurement')
             self.gt_fname = config.get('ground_truth')
             self.downsample_factor = config['downsample_factor']
-            self.noise_level = config['noise_level']
+            self.noise_level = config.get('noise_level')
 
     # TODO(mchan): Add a preprocess flag to enable/disable the preprocessing steps.
     def load_real_data(self,
-            show_im: bool = False) -> typing.Tuple[npt.NDArray, npt.NDArray]:
+                       show_im: bool = False) -> typing.Tuple[npt.NDArray, npt.NDArray]:
         """Loads PSF and diffuser cam image data.
 
         This function (1) reads a captured diffuser cam image and its corresponding calibrated point spread function (PSF) image, (2) downsamples those images, and (3) normalizes the intensity of those images.
@@ -59,31 +61,34 @@ class DataLoader():
             A tuple containing the PSF image and the diffuser cam image as 2D numpy arrays.
 
         Exceptions:
-            IOError: Both input images must have the same dimensions.
+            IOError: Must specify a path to the diffuser cam image. Also, the PSF and the diffuser cam image must have the same dimensions.
         """
         if (self.measurement_fname is None):
-            raise IOError('The path to the measurement image file was not specified in your configuration file.')
+            raise IOError(
+                'The path to the measurement image file was not specified in your configuration file.')
         psf = cv2.imread(self.psf_fname, cv2.IMREAD_GRAYSCALE).astype(float)
-        data = cv2.imread(self.measurement_fname, cv2.IMREAD_GRAYSCALE).astype(float)
-        
+        data = cv2.imread(self.measurement_fname,
+                          cv2.IMREAD_GRAYSCALE).astype(float)
+
         if (psf.shape != data.shape):
-            raise IOError('PSF image and diffuser cam image must be the same dimensions.')
-        
+            raise IOError(
+                'PSF image and diffuser cam image must be the same dimensions.')
+
         """In the picamera, there is a non-trivial background 
         (even in the dark) that must be subtracted"""
-        bg = np.mean(psf[5:15,5:15]) 
+        bg = np.mean(psf[5:15, 5:15])
         psf -= bg
         data -= bg
-        
+
         psf = utils.downsample(psf, self.downsample_factor)
         data = utils.downsample(data, self.downsample_factor)
-        
+
         """Now we normalize the images so they have the same total power. Technically not a
         necessary step, but the optimal hyperparameters are a function of the total power in 
         the PSF (among other things), so it makes sense to standardize it"""
         psf /= np.linalg.norm(psf.ravel())
         data /= np.linalg.norm(data.ravel())
-        
+
         if show_im:
             plt.figure()
             plt.title("Point spread function")
@@ -108,18 +113,21 @@ class DataLoader():
             A tuple containing the PSF image, the diffuser cam image, and the ground truth image as 2D numpy arrays.
 
         Exceptions:
-            IOError: Both input images must have the same dimensions.
+            IOError: Must specify a path to the ground truth image and a noise level.
         """
         if (self.gt_fname is None):
-            raise IOError('The path to the ground truth image file was not specified in your configuration file.')
+            raise IOError(
+                'The path to the ground truth image file was not specified in your configuration file.')
+        if (self.noise_level is None):
+            raise IOError(
+                'The simulation noise level was not specified in your configuration file.')
         psf = cv2.imread(self.psf_fname, cv2.IMREAD_GRAYSCALE).astype(float)
         gt = cv2.imread(self.gt_fname, cv2.IMREAD_GRAYSCALE).astype(float)
 
         if (psf.shape != gt.shape):
             # TODO(mchan): Use the Python logger to print warnings.
-            print('Resizing the PSF and ground truth images to be the same dimensions.')
+            print('Resizing the PSF and ground truth images to have the same dimensions.')
             gt = cv2.resize(gt, psf.shape[::-1])
-
 
         psf = utils.downsample(psf, self.downsample_factor)
         gt = utils.downsample(gt, self.downsample_factor)
@@ -129,7 +137,8 @@ class DataLoader():
         # Convolves the ground truth image by the PSF to get a simulated blurry diffuser cam measurement.
         A = np.fft.fft2(np.fft.ifftshift(utils.pad(psf)), norm='ortho')
         b = np.fft.fft2(np.fft.ifftshift(utils.pad(gt)))
-        data = np.real(utils.crop(np.fft.fftshift(np.fft.ifft2(A * b)), psf.shape))
+        data = np.real(utils.crop(np.fft.fftshift(
+            np.fft.ifft2(A * b)), psf.shape))
 
         std_dev = np.amax(data) * self.noise_level
         noise = np.random.normal(0, std_dev, data.shape)

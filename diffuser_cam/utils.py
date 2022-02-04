@@ -13,9 +13,10 @@ from torch.autograd import Variable
 from DnCNN.models import DnCNN
 from DnCNN.utils import *
 
+
 def compute_padding(n):
     """ Returns the nearest power of 2 that is larger than 2N. 
-    
+
     This optimization relies on the fact that
     the Discrete Fourier Transform leverages small prime factors for speed up.
 
@@ -23,6 +24,7 @@ def compute_padding(n):
         n: The input dimension that we'd like to pad
     """
     return int(np.power(2, np.ceil(np.log2(2 * n - 1))))
+
 
 def pad(input):
     """ Returns the input image padded so that its dimensions are the next power of 2 larger than 2w and 2h.
@@ -37,6 +39,7 @@ def pad(input):
         input, v_pad, v_pad, h_pad, h_pad, cv2.BORDER_CONSTANT)
     return padded
 
+
 def crop(input, original_shape):
     """ Returns the cropped version of a padded image
 
@@ -49,6 +52,7 @@ def crop(input, original_shape):
     h, w = original_shape
     h_pad, w_pad = diff // 2
     return input[h_pad:(input.shape[0] - h_pad), w_pad:(input.shape[1] - w_pad)]
+
 
 def downsample(img, factor):
     """Downsamples an image.
@@ -78,13 +82,14 @@ def downsample(img, factor):
                     img[::2, 1::2, ...]+img[1::2, 1::2, ...])
     return img
 
+
 def precompute_matrices(psf, data):
     """Precomputes matrix multiplication operations.
-    
+
     Args:
         psf: The point spread function image.
         data: The blurry diffuser cam image.
-    
+
     Returns:
         A tuple of precomputed matrices that are commonly used in the closed form solution of optimization methods.
 
@@ -106,6 +111,7 @@ def precompute_matrices(psf, data):
     Ahb = Ah * b
     return x, AhA, Ahb
 
+
 class Denoiser():
     def __init__(self, cuda=False):
         model_path = './DnCNN/logs/DnCNN-S-15/net.pth'
@@ -116,9 +122,11 @@ class Denoiser():
         self.cuda = cuda
         if not self.cuda:
             self.model = torch.nn.DataParallel(net, device_ids=device_ids)
-            self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+            self.model.load_state_dict(torch.load(
+                model_path, map_location=torch.device('cpu')))
         else:
-            self.model = torch.nn.DataParallel(net, device_ids=device_ids).cuda()
+            self.model = torch.nn.DataParallel(
+                net, device_ids=device_ids).cuda()
             self.model.load_state_dict(torch.load(model_path))
         self.model.eval()
 

@@ -8,7 +8,7 @@ def main():
     psf, data = dataloader.load_real_data()
     algo.reconstruct(psf, data, show_im=True)
 
-# Example script to evalute the algorithm reconstructions in simulation.
+# Example script to evaluate the reconstruction algorithms in simulation.
 def run_sim():
     algo = diffuser_cam.Algorithm('config/algorithm.json')
     dataloader = diffuser_cam.DataLoader('config/sim_data.json')

@@ -1,6 +1,6 @@
 {
     "psf": "img/psf.tif",
-    "ground_truth": "img/test/neon.jpg",
+    "ground_truth": "img/test/marshmello.jpg",
     "downsample_factor": 0.25,
     "noise_level": 0.01
 }
