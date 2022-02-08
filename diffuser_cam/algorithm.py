@@ -9,6 +9,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+import typing
 
 from diffuser_cam import utils
 
@@ -24,14 +25,17 @@ class Algorithm:
     Attributes:
         config: Dictionary of configuration parameters for the reconstruction algorithm.
     """
-    def __init__(self, config_fname: str) -> None:
+    def __init__(self, config_fname) -> None:
         """Loads the configuration file.
         
         Args:
             config_fname: Path to the JSON configuration file.
         """
-        with open(config_fname) as f:
-            self.config = json.load(f)
+        if (type(config_fname) == str):
+            with open(config_fname) as f:
+                self.config = json.load(f)
+        else:
+            self.config = config_fname
 
     def reconstruct(self, psf: npt.NDArray,
                     data: npt.NDArray,

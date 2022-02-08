@@ -117,7 +117,11 @@ class DataLoader():
 
         if (psf.shape != gt.shape):
             # TODO(mchan): Use the Python logger to print warnings.
+<<<<<<< Updated upstream
             print('Resizing the PSF and ground truth images to be the same dimensions.')
+=======
+            # print('Resizing the PSF and ground truth images to have the same dimensions.')
+>>>>>>> Stashed changes
             gt = cv2.resize(gt, psf.shape[::-1])
 
 
